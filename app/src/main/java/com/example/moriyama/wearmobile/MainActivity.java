@@ -80,6 +80,7 @@ public class MainActivity extends Activity implements GoogleApiClient.Connection
     TextView yTextView;
     TextView zTextView;
     LineChart mChart;
+    Button r_button;
     int x, y, z;
 
     GoogleAccountCredential mCredential;
@@ -121,7 +122,7 @@ public class MainActivity extends Activity implements GoogleApiClient.Connection
     int[] colors = new int[]{Color.RED, Color.GREEN, Color.BLUE};
 
     int now_len = 1;
-    boolean status = false;
+    boolean status = true;
     private long startTime;
     private long stopTime;
 
@@ -132,6 +133,7 @@ public class MainActivity extends Activity implements GoogleApiClient.Connection
         xTextView = findViewById(R.id.xValue);
         yTextView = findViewById(R.id.yValue);
         zTextView = findViewById(R.id.zValue);
+
         startTime = System.currentTimeMillis();
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -152,7 +154,35 @@ public class MainActivity extends Activity implements GoogleApiClient.Connection
         mChart.setData(new LineData()); // 空のLineData型インスタンスを追加
 
 
-        LinearLayout activityLayout = new LinearLayout(this);
+
+
+
+        //setContentView(activityLayout);
+        r_button = findViewById(R.id.button2);
+        r_button.setOnClickListener(new View.OnClickListener() {
+            final LinearLayout activityLayout = create_setting();
+            @Override
+            public void onClick(View v) {
+                setContentView(activityLayout);
+            }
+        });
+        // Initialize credentials and service object.
+        mCredential = GoogleAccountCredential.usingOAuth2(
+                getApplicationContext(), Arrays.asList(SCOPES))
+                .setBackOff(new ExponentialBackOff());
+    }
+
+    /* Checks if external storage is available for read and write */
+    public boolean isExternalStorageWritable() {
+        String state = Environment.getExternalStorageState();
+        if (Environment.MEDIA_MOUNTED.equals(state)) {
+            return true;
+        }
+        return false;
+    }
+
+    public LinearLayout create_setting(){
+        final LinearLayout activityLayout = new LinearLayout(this);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.MATCH_PARENT);
@@ -190,6 +220,16 @@ public class MainActivity extends Activity implements GoogleApiClient.Connection
                 H_DATA.clear();
                 SizeText.setText(
                         "AC_SIZE: " + AC_DATA.size() + "   H_DATA:" + H_DATA.size() );
+            }
+        });
+
+        final Button button3 = new Button (this);
+        button3.setText("Draw graph");
+        button3.setPadding(16, 16, 16, 16);
+        button3.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                setContentView(R.layout.activity_main);
             }
         });
 
@@ -264,29 +304,12 @@ public class MainActivity extends Activity implements GoogleApiClient.Connection
         activityLayout.addView(SizeText);
         activityLayout.addView(button1);
         activityLayout.addView(button2);
+        activityLayout.addView(button3);
         activityLayout.addView(editText);
         activityLayout.addView(buttonSave);
         activityLayout.addView(mOutputText);
-
-
-        setContentView(activityLayout);
-
-        // Initialize credentials and service object.
-        mCredential = GoogleAccountCredential.usingOAuth2(
-                getApplicationContext(), Arrays.asList(SCOPES))
-                .setBackOff(new ExponentialBackOff());
+        return activityLayout;
     }
-
-    /* Checks if external storage is available for read and write */
-    public boolean isExternalStorageWritable() {
-        String state = Environment.getExternalStorageState();
-        if (Environment.MEDIA_MOUNTED.equals(state)) {
-            return true;
-        }
-        return false;
-    }
-
-
     private void getResultsFromApi(List queue2) {
         if (!isGooglePlayServicesAvailable()) {
             acquireGooglePlayServices();
@@ -484,12 +507,13 @@ public class MainActivity extends Activity implements GoogleApiClient.Connection
         String[] value = msg.split(",", 0);
 
         String[] value2 = value[0].split(">", 0);
+        if (Integer.valueOf(value2[0])==0) {
+            xTextView.setText(String.valueOf(value2[1]));
+            yTextView.setText(String.valueOf(value2[2]));
+            zTextView.setText(String.valueOf(value2[3]));
+        }
 
-        xTextView.setText(String.valueOf(value2[0]));
-        yTextView.setText(String.valueOf(value2[1]));
-        zTextView.setText(String.valueOf(value2[2]));
-
-        Log.d(TAG, "VVV" + value.length);
+        Log.d(TAG, "DDD" + value2[1]);
         stopTime = System.currentTimeMillis();
 
         long time = stopTime - startTime;
@@ -500,7 +524,7 @@ public class MainActivity extends Activity implements GoogleApiClient.Connection
         LineData data = mChart.getLineData();
         queue = dec_queue(count);
         //Log.d(TAG, "VVV" + queue.size() + "," + count);
-        if (data != null && status) {
+        if (Integer.valueOf(value2[0])==0 && status) {
             for (int i = 0; i < 3; i++) {
                 ILineDataSet set = data.getDataSetByIndex(i);
                 if (set == null) {
@@ -508,7 +532,7 @@ public class MainActivity extends Activity implements GoogleApiClient.Connection
                     data.addDataSet(set);
                 }
 
-                data.addEntry(new Entry(set.getEntryCount(), Float.parseFloat(value2[i])), i);
+                data.addEntry(new Entry(set.getEntryCount(), Float.parseFloat(value2[i+1])), i);
                 data.notifyDataChanged();
             }
 
@@ -519,15 +543,15 @@ public class MainActivity extends Activity implements GoogleApiClient.Connection
             if (count % 1 == 0 && value2[0].length() != 0) {
                 for (int i = 0; i < value.length; i++) {
                     String[] value3 = value[i].split(">", 0);
-                    /*if (queue.size() < data_size) {
+                    if (Integer.valueOf(value3[0])==0 && queue.size() < data_size) {
                         queue.add(Arrays.asList(
                                 line_count,
-                                String.valueOf(value3[0]),
                                 String.valueOf(value3[1]),
-                                String.valueOf(value3[2])
+                                String.valueOf(value3[2]),
+                                String.valueOf(value3[3])
                         ));
-
-                    }*/
+                        line_count += 1;
+                    }
                     if (Integer.valueOf(value3[0])==0) {
                         AC_DATA.add(Arrays.asList(String.valueOf(value3[4]),
                                 String.valueOf(value3[1]),
@@ -543,11 +567,11 @@ public class MainActivity extends Activity implements GoogleApiClient.Connection
                 SizeText.setText(
                         "AC_SIZE: " + AC_DATA.size() + "   H_DATA:" + H_DATA.size() );
 
-                /*if (queue.size() >= data_size) {
+                if (queue.size() >= data_size) {
                     getResultsFromApi(queue);
                     count += 1;
 
-                }*/
+                }
 
 
             }
@@ -634,13 +658,13 @@ public class MainActivity extends Activity implements GoogleApiClient.Connection
 
         private void putDataFromApi() throws IOException {
             List values = queue3;
-            String spreadsheetId = "1pmIFv6CUjUXB2GVtp3UghllLlEnegSwoah56Fc-k-fc";
+            String spreadsheetId = "15EcJPGcJvOaBkoP3dfGcxGFOuAHALGPdjXrUeztNHTw";
             //String spreadsheetId = "1XxrUxjqNiSh4IkZc2gZiTJIJj2gY4snGtc9P-l_7ddQ";
             String VV = values.get(0).toString().substring(1);
             now_len = Integer.parseInt(VV.split(",")[0]);
-            now_len = 1;
+            //now_len = 1;
             //Log.d(TAG, "VVV"+now_len);
-            String line = "シート1!A" + String.valueOf(now_len) + ":D";
+            String line = "sheet2!A" + String.valueOf(now_len) + ":D";
             String range = line + (now_len + data_size);
             ValueRange valueRange = new ValueRange();
             valueRange.setValues(values);
